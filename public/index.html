@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Drawing Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #2c3e50;
+            color: white;
+        }
+        
+        #gameContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        #toolbar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            padding: 15px;
+            background-color: #34495e;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .tool-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-btn.active {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 3px white;
+        }
+        
+        #brushSize {
+            width: 100px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        #clearBtn {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        #clearBtn:hover {
+            background-color: #c0392b;
+        }
+        
+        #gameCanvas {
+            border: 3px solid #34495e;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        
+        #playersInfo {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #34495e;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .player-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .player-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+        
+        #instructions {
+            text-align: center;
+            max-width: 600px;
+            background-color: #34495e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="instructions">
+            <h2>🎨 Multiplayer Drawing Game</h2>
+            <p>Draw together with other players in real-time! Choose your colors and brush size, then start creating amazing art collaboratively!</p>
+        </div>
+        
+        <div id="toolbar">
+            <div class="tool-group">
+                <label>Colors:</label>
+                <button class="color-btn active" data-color="#000000" style="background-color: #000000;"></button>
+                <button class="color-btn" data-color="#FF6B6B" style="background-color: #FF6B6B;"></button>
+                <button class="color-btn" data-color="#4ECDC4" style="background-color: #4ECDC4;"></button>
+                <button class="color-btn" data-color="#45B7D1" style="background-color: #45B7D1;"></button>
+                <button class="color-btn" data-color="#96CEB4" style="background-color: #96CEB4;"></button>
+                <button class="color-btn" data-color="#FECA57" style="background-color: #FECA57;"></button>
+                <button class="color-btn" data-color="#FF9FF3" style="background-color: #FF9FF3;"></button>
+                <button class="color-btn" data-color="#5F27CD" style="background-color: #5F27CD;"></button>
+            </div>
+            
+            <div class="tool-group">
+                <label for="brushSize">Brush Size:</label>
+                <input type="range" id="brushSize" min="2" max="30" value="8">
+                <span id="brushSizeValue">8</span>
+            </div>
+            
+            <button id="clearBtn">Clear Canvas</button>
+        </div>
+        
+        <div id="gameCanvas"></div>
+    </div>
+    
+    <div id="playersInfo">
+        <h3>Online Players</h3>
+        <div id="playersList"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
