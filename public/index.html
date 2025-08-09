@@ -3,159 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Drawing Game</title>
+    <title>Multiplayer Shape Recognition Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.70.0/phaser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="recognizer.js"></script>
     <style>
         body {
             margin: 0;
             padding: 20px;
             font-family: Arial, sans-serif;
-            background-color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            min-height: 100vh;
         }
         
-        #gameContainer {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
         
-        #toolbar {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            padding: 15px;
-            background-color: #34495e;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
         }
         
-        .tool-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+        .menu {
+            text-align: center;
+            margin-bottom: 20px;
         }
         
-        .color-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .color-btn:hover {
-            transform: scale(1.1);
-        }
-        
-        .color-btn.active {
-            transform: scale(1.2);
-            box-shadow: 0 0 0 3px white;
-        }
-        
-        #brushSize {
-            width: 100px;
-        }
-        
-        button {
-            padding: 10px 15px;
+        .menu input {
+            padding: 10px;
+            margin: 5px;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
+            font-size: 16px;
         }
         
-        #clearBtn {
-            background-color: #e74c3c;
+        .menu button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #4ECDC4;
             color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
         }
         
-        #clearBtn:hover {
-            background-color: #c0392b;
+        .menu button:hover {
+            background: #45B7D1;
         }
         
-        #gameCanvas {
-            border: 3px solid #34495e;
-            border-radius: 10px;
-            background-color: white;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        .menu button:disabled {
+            background: #666;
+            cursor: not-allowed;
         }
         
-        #playersInfo {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: #34495e;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .players-list {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px;
         }
         
         .player-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
+            margin: 5px 0;
         }
         
         .player-color {
             width: 20px;
             height: 20px;
             border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid white;
         }
         
-        #instructions {
+        .game-status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px;
             text-align: center;
-            max-width: 600px;
-            background-color: #34495e;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
             padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        #gameCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1000;
+        }
+        
+        #gameCanvas.hidden {
+            display: none !important;
+        }
+        
+        #gameCanvas canvas {
+            border: none !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .message {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #ff6b6b;
+        }
+        
+        .success {
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid #4ECDC4;
         }
     </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="instructions">
-            <h2>🎨 Multiplayer Drawing Game</h2>
-            <p>Draw together with other players in real-time! Choose your colors and brush size, then start creating amazing art collaboratively!</p>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Multiplayer Shape Recognition Game</h1>
         </div>
         
-        <div id="toolbar">
-            <div class="tool-group">
-                <label>Colors:</label>
-                <button class="color-btn active" data-color="#000000" style="background-color: #000000;"></button>
-                <button class="color-btn" data-color="#FF6B6B" style="background-color: #FF6B6B;"></button>
-                <button class="color-btn" data-color="#4ECDC4" style="background-color: #4ECDC4;"></button>
-                <button class="color-btn" data-color="#45B7D1" style="background-color: #45B7D1;"></button>
-                <button class="color-btn" data-color="#96CEB4" style="background-color: #96CEB4;"></button>
-                <button class="color-btn" data-color="#FECA57" style="background-color: #FECA57;"></button>
-                <button class="color-btn" data-color="#FF9FF3" style="background-color: #FF9FF3;"></button>
-                <button class="color-btn" data-color="#5F27CD" style="background-color: #5F27CD;"></button>
+        <div id="menuScreen" class="menu">
+            <h2>Welcome! Join or Create a Game (1-4 players)</h2>
+            <div>
+                <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
             </div>
-            
-            <div class="tool-group">
-                <label for="brushSize">Brush Size:</label>
-                <input type="range" id="brushSize" min="2" max="30" value="8">
-                <span id="brushSizeValue">8</span>
+            <div>
+                <button id="createRoomBtn">Create Room</button>
+                <input type="text" id="roomCode" placeholder="Room Code" maxlength="6" style="text-transform: uppercase;">
+                <button id="joinRoomBtn">Join Room</button>
             </div>
-            
-            <button id="clearBtn">Clear Canvas</button>
+            <div id="messageArea"></div>
         </div>
         
-        <div id="gameCanvas"></div>
-    </div>
-    
-    <div id="playersInfo">
-        <h3>Online Players</h3>
-        <div id="playersList"></div>
+        <div id="gameScreen" class="hidden">
+            <div class="game-info">
+                <div class="players-list">
+                    <h3>Players</h3>
+                    <div id="playersList"></div>
+                </div>
+                <div class="game-status">
+                    <h3>Room: <span id="roomId"></span></h3>
+                    <div id="gameStatus">Waiting for players...</div>
+                    <button id="startGameBtn" class="hidden">Start Game</button>
+                    <button id="leaveRoomBtn">Leave Room</button>
+                </div>
+            </div>
+            
+            <div id="instructions" class="instructions">
+                <p><strong>How to Play:</strong></p>
+                <p>Draw the shapes that match your color! When you draw the correct shape near a symbol of your color, it will disappear.</p>
+                <p><span id="gameMode">Work together with your team to clear all symbols and win!</span> Games can be played with 1-4 players.</p>
+                <p><strong>Your color:</strong> <span id="playerColorName"></span></p>
+            </div>
+            
+            <div id="gameCanvas" class="hidden"></div>
+        </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

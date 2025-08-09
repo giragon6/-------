@@ -1,0 +1,11 @@
+<svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Red Avatar -->
+  <circle cx="32" cy="45" r="12" fill="#FF6B6B"/>
+  <circle cx="32" cy="25" r="15" fill="#FFB3B3"/>
+  <circle cx="27" cy="22" r="2" fill="#000"/>
+  <circle cx="37" cy="22" r="2" fill="#000"/>
+  <path d="M 27 28 Q 32 32 37 28" stroke="#000" stroke-width="2" fill="none"/>
+  <rect x="20" y="37" width="24" height="20" rx="5" fill="#FF6B6B"/>
+  <rect x="15" y="42" width="8" height="12" rx="4" fill="#FFB3B3"/>
+  <rect x="41" y="42" width="8" height="12" rx="4" fill="#FFB3B3"/>
+</svg>
