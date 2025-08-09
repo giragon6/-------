@@ -16,43 +16,66 @@ app.use(express.static(path.join(__dirname, 'public')));
 const rooms = new Map();
 const playerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']; // Red, Teal, Blue, Green
 const symbols = [
-  // 'five-point star', 
-  // 'asterisk', 
-  // 'X', 
-  // 'H', 
-  // 'T', 
-  'line'];
+  'X', 
+  'line',
+  'five-point star', 
+  'arrowhead',
+  'asterisk'
+];
+
+// Broadcast available rooms to all clients
+function broadcastRoomsList() {
+    const roomsList = Array.from(rooms.values())
+        .filter(room => room.gameState === 'lobby') // Only show lobby rooms
+        .map(room => ({
+            id: room.id,
+            playerCount: room.players.length,
+            gameState: room.gameState,
+            thumbnail: room.thumbnail,
+            createdAt: room.createdAt
+        }));
+    
+    io.emit('roomsList', roomsList);
+}
 
 class Room {
     constructor(id) {
         this.id = id;
         this.players = [];
-        this.gameState = 'waiting'; // waiting, playing, finished
+        this.gameState = 'lobby'; // lobby, playing, finished
         this.targetSymbols = [];
         this.completedSymbols = [];
+        this.sharedHearts = 6; // 6 hearts shared among all players
+        this.thumbnail = null; // Store room thumbnail drawing
+        this.createdAt = Date.now();
+        this.hostId = null; // Track who created the room
+        this.currentRound = 1; // Track current round (infinite rounds until hearts run out)
     }
 
-    addPlayer(playerId, playerName) {
-        if (this.players.length >= 4) return false;
+    addPlayer(playerId) {
+        if (this.players.length >= 4 || this.gameState !== 'lobby') return false;
         
-        // Starting positions for players (spread across the world)
+        // Set host as the first player
+        if (this.players.length === 0) {
+            this.hostId = playerId;
+        }
+        
         const startingPositions = [
-            { x: 150, y: 450 }, // Red player
-            { x: 350, y: 450 }, // Teal player  
-            { x: 550, y: 450 }, // Blue player
-            { x: 650, y: 450 }  // Green player
+            { x: 70, y: 590 }, // Red player
+            { x: 250, y: 570 }, // Teal player  
+            { x: 430, y: 550 }, // Blue player
+            { x: 610, y: 510 }  // Green player
         ];
         
         const player = {
             id: playerId,
-            name: playerName,
             color: playerColors[this.players.length],
             colorName: ['Red', 'Teal', 'Blue', 'Green'][this.players.length],
             avatar: ['red', 'teal', 'blue', 'green'][this.players.length],
             x: startingPositions[this.players.length].x,
             y: startingPositions[this.players.length].y,
-            hearts: 3, // Each player starts with 3 hearts
-            alive: true
+            alive: true,
+            isHost: playerId === this.hostId || this.players.length === 0
         };
         
         this.players.push(player);
@@ -77,7 +100,6 @@ class Room {
                 player.avatar = ['red', 'teal', 'blue', 'green'][i];
                 player.x = startingPositions[i].x;
                 player.y = startingPositions[i].y;
-                player.hearts = player.hearts || 3; // Preserve hearts or set default
                 player.alive = player.alive !== undefined ? player.alive : true;
             });
         }
@@ -89,10 +111,44 @@ class Room {
         this.gameState = 'playing';
         this.generateTargetSymbols();
         
+        // Assign target players to each tentacle
+        this.assignTentacleTargets();
+        
         // Start the game update loop for tentacle movement
         this.startGameLoop();
         
         return true;
+    }
+
+    assignTentacleTargets() {
+        const alivePlayers = this.players.filter(p => p.alive);
+        if (alivePlayers.length === 0) return;
+
+        // Assign each tentacle a random target player
+        this.targetSymbols.forEach(symbol => {
+            if (!symbol.completed && !symbol.targetPlayerId) {
+                const randomPlayer = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                symbol.targetPlayerId = randomPlayer.id;
+                console.log(`Tentacle ${symbol.id} (${symbol.type}, ${symbol.color}) assigned to target player ${randomPlayer.name}`);
+            }
+        });
+    }
+
+    reassignTentacleTargets() {
+        const alivePlayers = this.players.filter(p => p.alive);
+        if (alivePlayers.length === 0) return;
+
+        // Reassign tentacles that are targeting dead players
+        this.targetSymbols.forEach(symbol => {
+            if (!symbol.completed && symbol.targetPlayerId) {
+                const targetPlayer = this.players.find(p => p.id === symbol.targetPlayerId);
+                if (!targetPlayer || !targetPlayer.alive) {
+                    const randomPlayer = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                    symbol.targetPlayerId = randomPlayer.id;
+                    console.log(`Tentacle ${symbol.id} reassigned to target player ${randomPlayer.color}`);
+                }
+            }
+        });
     }
 
     startGameLoop() {
@@ -112,38 +168,36 @@ class Room {
     updateTentacles() {
         if (this.gameState !== 'playing') return;
 
-        const speed = 0.5; // Tentacle movement speed
+        const speed = 1; // Tentacle movement speed (pixels per update)
         let updated = false;
 
         this.targetSymbols.forEach(symbol => {
             if (!symbol.completed) {
-                // Find the nearest alive player
-                const alivePlayers = this.players.filter(p => p.alive);
-                if (alivePlayers.length === 0) return;
-
-                let nearestPlayer = null;
-                let minDistance = Infinity;
-
-                alivePlayers.forEach(player => {
-                    const distance = Math.sqrt(
-                        Math.pow(symbol.x - player.x, 2) + 
-                        Math.pow(symbol.y - player.y, 2)
-                    );
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        nearestPlayer = player;
+                // Find the assigned target player
+                const targetPlayer = this.players.find(p => p.id === symbol.targetPlayerId && p.alive);
+                
+                if (!targetPlayer) {
+                    // If target player is dead, reassign to a random alive player
+                    const alivePlayers = this.players.filter(p => p.alive);
+                    if (alivePlayers.length > 0) {
+                        const newTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                        symbol.targetPlayerId = newTarget.id;
+                        console.log(`Tentacle ${symbol.id} reassigned from dead player to ${newTarget.color}`);
+                    } else {
+                        return; // No alive players
                     }
-                });
+                }
 
-                if (nearestPlayer) {
-                    // Move tentacle toward nearest player
-                    const dx = nearestPlayer.x - symbol.x;
-                    const dy = nearestPlayer.y - symbol.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
+                const assignedTarget = this.players.find(p => p.id === symbol.targetPlayerId);
+                if (assignedTarget) {
+                    const dx = assignedTarget.x - symbol.x;
 
-                    if (distance > 1) {
-                        symbol.x += (dx / distance) * speed;
-                        symbol.y += (dy / distance) * speed;
+                    if (Math.abs(dx) > speed) {
+                        if (dx > 0) {
+                            symbol.x += speed;
+                        } else {
+                            symbol.x -= speed;
+                        }
                         updated = true;
                     }
                 }
@@ -159,53 +213,89 @@ class Room {
     checkCollisions() {
         if (this.gameState !== 'playing') return;
 
-        const collisionDistance = 30; // Distance at which tentacle hits player
+        const collisionDistance = 30; // Distance at which tentacle hits player (x-axis only)
         let playerHit = false;
+        const tentaclesToRemove = []; // Track tentacles to remove after collision
 
         this.players.forEach(player => {
             if (!player.alive) return;
 
             this.targetSymbols.forEach(symbol => {
                 if (!symbol.completed) {
-                    const distance = Math.sqrt(
-                        Math.pow(symbol.x - player.x, 2) + 
-                        Math.pow(symbol.y - player.y, 2)
-                    );
+                    // Only check x-axis distance for ocean tentacle collision
+                    const xDistance = Math.abs(symbol.x - player.x);
 
-                    if (distance < collisionDistance) {
-                        // Player hit by tentacle
-                        player.hearts--;
+                    if (xDistance < collisionDistance) {
+                        // Player hit by tentacle - reduce shared hearts
+                        this.sharedHearts--;
                         playerHit = true;
                         
-                        if (player.hearts <= 0) {
-                            player.alive = false;
+                        // Mark tentacle for removal after collision
+                        tentaclesToRemove.push(symbol.id);
+                        
+                        if (this.sharedHearts <= 0) {
+                            // All players lose when shared hearts reach 0
+                            this.players.forEach(p => p.alive = false);
+                        } else {
+                            // Reassign tentacle targets if any player died
+                            this.reassignTentacleTargets();
                         }
 
-                        // Remove the tentacle that hit the player
-                        symbol.completed = true;
-                        this.completedSymbols.push(symbol.id);
+                        console.log(`Tentacle ${symbol.id} hit player ${player.id}, removing tentacle. Hearts remaining: ${this.sharedHearts}`);
                     }
                 }
             });
         });
 
+        // Remove tentacles that collided with players
+        tentaclesToRemove.forEach(tentacleId => {
+            const symbol = this.targetSymbols.find(s => s.id === tentacleId);
+            if (symbol) {
+                symbol.completed = true;
+                this.completedSymbols.push(symbol.id);
+            }
+        });
+
         if (playerHit) {
             this.broadcastPlayerUpdate();
             
-            // Check if all players are dead
-            const alivePlayers = this.players.filter(p => p.alive);
-            if (alivePlayers.length === 0) {
+            // Check if all players are dead (shared hearts depleted)
+            if (this.sharedHearts <= 0) {
                 this.gameState = 'lost';
                 this.stopGameLoop();
                 this.broadcastGameLost();
             }
         }
 
-        // Check win condition
+        // Check round completion condition (all symbols cleared)
         if (this.targetSymbols.every(s => s.completed) && this.gameState === 'playing') {
-            this.gameState = 'finished';
-            this.stopGameLoop();
+            console.log(`Round ${this.currentRound} completed!`);
+            
+            // Always start next round - game continues until hearts run out
+            this.startNextRound();
         }
+    }
+
+    startNextRound() {
+        this.currentRound++;
+        console.log(`Starting round ${this.currentRound}`);
+        
+        // Reset symbols for next round
+        this.targetSymbols = [];
+        this.completedSymbols = [];
+        
+        // Generate new symbols for this round
+        this.generateTargetSymbols();
+        
+        // Reassign tentacle targets
+        this.assignTentacleTargets();
+        
+        // Broadcast round completion and new round start
+        if (this.broadcastCallback) {
+            this.broadcastCallback('roundCompleted', this.getGameData());
+        }
+        
+        console.log(`Round ${this.currentRound} started with ${this.targetSymbols.length} new symbols`);
     }
 
     broadcastTentacleUpdate() {
@@ -238,7 +328,7 @@ class Room {
         
         let symbolId = 0;
         
-        // Create symbols for each player
+        // Create symbols for each player color
         for (let playerIndex = 0; playerIndex < this.players.length; playerIndex++) {
             const playerColor = this.players[playerIndex].color;
             let playerSymbolCount = symbolsPerPlayer;
@@ -251,36 +341,41 @@ class Room {
             for (let i = 0; i < playerSymbolCount; i++) {
                 const randomSymbol = symbols[Math.floor(Math.random() * symbols.length)];
                 
-                // Spawn tentacles from the edges of the screen
-                const spawnSide = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+                // Spawn tentacles from the ocean (off-screen at bottom)
                 let spawnX, spawnY;
+                let validSpawn = false;
+                let attempts = 0;
                 
-                switch (spawnSide) {
-                    case 0: // top
-                        spawnX = Math.random() * 800;
-                        spawnY = -50;
-                        break;
-                    case 1: // right
-                        spawnX = 850;
-                        spawnY = Math.random() * 600;
-                        break;
-                    case 2: // bottom
-                        spawnX = Math.random() * 800;
-                        spawnY = 650;
-                        break;
-                    case 3: // left
-                        spawnX = -50;
-                        spawnY = Math.random() * 600;
-                        break;
+                while (!validSpawn && attempts < 10) {
+                    spawnX = Math.random() * 800; // Random x position across screen width
+                    spawnY = 700; // Fixed at ocean floor (off-screen at bottom)
+                    
+                    // Check if spawn position is far enough from all players
+                    validSpawn = true;
+                    for (let player of this.players) {
+                        const distanceToPlayer = Math.abs(spawnX - player.x);
+                        if (distanceToPlayer < 100) { // Minimum 100px distance from players
+                            validSpawn = false;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+                
+                // Fallback if no valid spawn found
+                if (!validSpawn) {
+                    spawnX = Math.random() * 800;
+                    spawnY = 700;
                 }
                 
                 this.targetSymbols.push({
                     id: `symbol_${symbolId++}`,
                     type: randomSymbol,
-                    color: playerColor,
+                    color: playerColor, // Keep player-specific colors for drawing matching
                     x: spawnX,
                     y: spawnY,
-                    completed: false
+                    completed: false,
+                    targetPlayerId: null // Will be assigned when game starts
                 });
             }
         }
@@ -296,10 +391,10 @@ class Room {
         const player = this.players.find(p => p.id === playerId);
         if (!player) return null;
 
-        console.log(`Checking match for player ${player.name} (${player.color}): ${symbolType})`);
+        console.log(`Checking match for player ${player.color}: ${symbolType})`);
         console.log(`Available symbols:`, this.targetSymbols.filter(s => !s.completed).map(s => `${s.type} (${s.color}) at (${s.x}, ${s.y})`));
 
-        // Find nearby symbols of the player's color that match the drawn symbol
+        // Find symbols that match both the drawn symbol type AND the player's color
         const matchingSymbol = this.targetSymbols.find(symbol => 
             !symbol.completed &&
             symbol.type === symbolType &&
@@ -309,11 +404,6 @@ class Room {
         if (matchingSymbol) {
             matchingSymbol.completed = true;
             this.completedSymbols.push(matchingSymbol.id);
-            
-            // Check if all symbols are completed
-            if (this.targetSymbols.every(s => s.completed)) {
-                this.gameState = 'finished';
-            }
             
             return matchingSymbol;
         }
@@ -327,7 +417,9 @@ class Room {
             players: this.players,
             gameState: this.gameState,
             targetSymbols: this.targetSymbols,
-            completedSymbols: this.completedSymbols
+            completedSymbols: this.completedSymbols,
+            sharedHearts: this.sharedHearts,
+            currentRound: this.currentRound
         };
     }
 }
@@ -335,30 +427,49 @@ class Room {
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
     
+    // Send current rooms list to new client
+    const roomsList = Array.from(rooms.values()).map(room => ({
+        id: room.id,
+        playerCount: room.players.length,
+        gameState: room.gameState,
+        thumbnail: room.thumbnail,
+        createdAt: room.createdAt
+    }));
+    socket.emit('roomsList', roomsList);
+    
     socket.on('createRoom', (data) => {
         const roomId = Math.random().toString(36).substr(2, 6).toUpperCase();
         const room = new Room(roomId);
+        
+        // Set thumbnail from client drawing
+        if (data.thumbnail) {
+            room.thumbnail = data.thumbnail;
+        }
         
         // Set up broadcast callback
         room.broadcastCallback = (eventName, data) => {
             io.to(roomId).emit(eventName, data);
         };
         
-        const player = room.addPlayer(socket.id, data.playerName);
+        const player = room.addPlayer(socket.id);
         
         if (player) {
             rooms.set(roomId, room);
             socket.join(roomId);
             socket.roomId = roomId;
             socket.emit('roomCreated', { roomId, player, room: room.getGameData() });
-            console.log(`Room ${roomId} created by ${data.playerName}`);
+            
+            // Broadcast updated rooms list to all clients
+            broadcastRoomsList();
+            
+            console.log(`Room ${roomId} created by ${socket.id}`);
         }
     });
 
     socket.on('joinRoom', (data) => {
         const room = rooms.get(data.roomId);
-        if (room && room.gameState === 'waiting') {
-            const player = room.addPlayer(socket.id, data.playerName);
+        if (room && room.gameState === 'lobby') { // Only allow joining lobby rooms
+            const player = room.addPlayer(socket.id);
             if (player) {
                 socket.join(data.roomId);
                 socket.roomId = data.roomId;
@@ -372,7 +483,11 @@ io.on('connection', (socket) => {
                 
                 socket.emit('roomJoined', { player, room: room.getGameData() });
                 socket.to(data.roomId).emit('playerJoined', { player, room: room.getGameData() });
-                console.log(`${data.playerName} joined room ${data.roomId}`);
+                
+                // Broadcast updated rooms list to all clients
+                broadcastRoomsList();
+                
+                console.log(`${socket.id} joined room ${data.roomId}`);
             } else {
                 socket.emit('roomFull');
             }
@@ -384,9 +499,15 @@ io.on('connection', (socket) => {
     socket.on('startGame', () => {
         if (socket.roomId) {
             const room = rooms.get(socket.roomId);
-            if (room && room.startGame()) {
-                io.to(socket.roomId).emit('gameStarted', room.getGameData());
-                console.log(`Game started in room ${socket.roomId}`);
+            // Only allow host to start the game
+            if (room && socket.id === room.hostId && room.gameState === 'lobby') {
+                if (room.startGame()) {
+                    // Remove room from public list once game starts
+                    broadcastRoomsList();
+                    
+                    io.to(socket.roomId).emit('gameStarted', room.getGameData());
+                    console.log(`Game started in room ${socket.roomId} by host ${socket.id}`);
+                }
             }
         }
     });
@@ -417,11 +538,6 @@ io.on('connection', (socket) => {
                         symbol: matchedSymbol,
                         room: room.getGameData()
                     });
-                    
-                    if (room.gameState === 'finished') {
-                        io.to(socket.roomId).emit('gameFinished', room.getGameData());
-                        console.log(`Game finished in room ${socket.roomId}`);
-                    }
                 } else {
                     console.log(`No symbol match found for ${data.symbolType}`);
                 }
@@ -438,8 +554,12 @@ io.on('connection', (socket) => {
                     room.stopGameLoop(); // Stop the game loop when room is empty
                     rooms.delete(socket.roomId);
                     console.log(`Room ${socket.roomId} deleted`);
+                    // Broadcast updated rooms list to all clients
+                    broadcastRoomsList();
                 } else {
                     socket.to(socket.roomId).emit('playerLeft', room.getGameData());
+                    // Broadcast updated rooms list to all clients
+                    broadcastRoomsList();
                 }
             }
         }

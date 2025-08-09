@@ -1,4 +1,17 @@
-<svg width="50" height="50" xmlns="http://www.w3.org/2000/svg">
-  <polygon points="25,5 30,20 45,20 33,30 38,45 25,35 12,45 17,30 5,20 20,20" 
-           fill="none" stroke="currentColor" stroke-width="3"/>
+<svg width="67" height="62" viewBox="0 0 67 62" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_d_5_103)">
+<path d="M33.5 1L33.6684 1.5M33.6684 1.5L50 50L9 20H57.5L15.5 48L33.6684 1.5Z" stroke="white" stroke-width="3" shape-rendering="crispEdges"/>
+</g>
+<defs>
+<filter id="filter0_d_5_103" x="0.409822" y="0.521309" width="66.0443" height="61.4818" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="2"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_5_103"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_5_103" result="shape"/>
+</filter>
+</defs>
 </svg>

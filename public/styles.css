@@ -1,0 +1,420 @@
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+#menuScreen {
+    background: url('assets/background.jpg') center center/cover no-repeat;
+    min-height: 100vh;
+    width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+
+#menuScreen > * {
+    position: relative;
+    z-index: 1;
+}
+
+#menuScreen .create-game-section,
+#menuScreen .rooms-gallery,
+#menuScreen #messageArea {
+    background: none !important;
+    border-radius: 0;
+    padding: 10px;
+}
+
+body.game-active {
+    overflow: hidden !important;
+}
+
+body.menu-active {
+    overflow: hidden !important;
+}
+
+body.menu-active::-webkit-scrollbar {
+    display: none;
+}
+
+body.menu-active {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.menu {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.create-game-section {
+    margin-bottom: 30px;
+}
+
+.create-game-section button {
+    width: 80px;
+    height: 80px;
+    border: none;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 36px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+.create-game-section button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+#thumbnailCanvas {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    background: white;
+    border-radius: 15px;
+    z-index: 2000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+#thumbnailCanvas canvas {
+    border-radius: 15px;
+}
+
+.rooms-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.gallery-title {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.room-thumbnail {
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.room-thumbnail:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.room-thumbnail canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+}
+
+.room-thumbnail .play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.room-thumbnail:hover .play-icon {
+    opacity: 1;
+}
+
+.room-thumbnail .player-count {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 12px;
+}
+
+.lobby-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: url('assets/background.jpg') center center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1500;
+}
+
+.lobby-container {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    min-width: 400px;
+}
+
+.lobby-players {
+    margin-bottom: 30px;
+}
+
+.lobby-player {
+    display: inline-block;
+    margin: 10px;
+    text-align: center;
+}
+
+.lobby-player-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    font-weight: bold;
+}
+
+.lobby-player.host .lobby-player-avatar::after {
+    content: '👑';
+    position: absolute;
+    margin-top: -20px;
+    margin-left: 20px;
+    font-size: 16px;
+}
+
+.lobby-controls {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.lobby-controls button {
+    width: 60px;
+    height: 60px;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#startGameBtn {
+    background: #4ECDC4;
+    color: white;
+}
+
+#startGameBtn:hover {
+    background: #45B7D1;
+    transform: scale(1.1);
+}
+
+#leaveLobbyBtn {
+    background: #ff6b6b;
+    color: white;
+}
+
+#leaveLobbyBtn:hover {
+    background: #ff5252;
+    transform: scale(1.1);
+}
+
+.game-ui {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    color: white;
+}
+
+.players-list {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    margin: 0;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+}
+
+.player-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 10px;
+    border: 2px solid white;
+}
+
+.shared-hearts {
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 18px;
+}
+
+.menu button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    background: #4ECDC4;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.menu button:hover {
+    background: #45B7D1;
+}
+
+.menu button:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+}
+
+.player-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 10px;
+    border: 2px solid white;
+}
+
+.game-status {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 5px;
+    margin: 5px;
+    text-align: center;
+}
+
+.instructions {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 5px;
+    margin: 10px 0;
+    text-align: center;
+}
+
+#gameCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+}
+
+#gameCanvas.hidden {
+    display: none !important;
+}
+
+#gameCanvas canvas {
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.message {
+    text-align: center;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.error {
+    background: rgba(255, 0, 0, 0.2);
+    border: 1px solid #ff6b6b;
+}
+
+.success {
+    background: rgba(0, 255, 0, 0.2);
+    border: 1px solid #4ECDC4;
+}
+
+#createRoomBtn {
+    font-size: 32px;
+}
+
+.pop-title {
+    font-family: 'Luckiest Guy', cursive, sans-serif;
+    font-size: 2.5rem;
+    color: #3bb6ff;
+    text-shadow: 2px 2px 0 #fff, 4px 4px 0 #b3e0ff, 6px 6px 0 #1e5fff;
+    letter-spacing: 0.1em;
+    margin: 30px 0 20px 0;
+    display: inline-block;
+    background: none !important;
+}

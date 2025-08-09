@@ -3,189 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Shape Recognition Game</title>
+    <title>⊹ ࣪ ﹏𓊝﹏𓂁﹏⊹ ࣪ ˖</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.70.0/phaser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script src="recognizer.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .menu {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .menu input {
-            padding: 10px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        
-        .menu button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            background: #4ECDC4;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .menu button:hover {
-            background: #45B7D1;
-        }
-        
-        .menu button:disabled {
-            background: #666;
-            cursor: not-allowed;
-        }
-        
-        .game-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .players-list {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 5px;
-            margin: 5px;
-        }
-        
-        .player-item {
-            display: flex;
-            align-items: center;
-            margin: 5px 0;
-        }
-        
-        .player-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-right: 10px;
-            border: 2px solid white;
-        }
-        
-        .game-status {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 5px;
-            margin: 5px;
-            text-align: center;
-        }
-        
-        .instructions {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 5px;
-            margin: 10px 0;
-            text-align: center;
-        }
-        
-        #gameCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1000;
-        }
-        
-        #gameCanvas.hidden {
-            display: none !important;
-        }
-        
-        #gameCanvas canvas {
-            border: none !important;
-            border-radius: 0 !important;
-            margin: 0 !important;
-            box-shadow: none !important;
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-        
-        .message {
-            text-align: center;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        
-        .error {
-            background: rgba(255, 0, 0, 0.2);
-            border: 1px solid #ff6b6b;
-        }
-        
-        .success {
-            background: rgba(0, 255, 0, 0.2);
-            border: 1px solid #4ECDC4;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎨 Multiplayer Shape Recognition Game</h1>
         </div>
         
         <div id="menuScreen" class="menu">
-            <h2>Welcome! Join or Create a Game (1-4 players)</h2>
-            <div>
-                <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
-            </div>
-            <div>
-                <button id="createRoomBtn">Create Room</button>
-                <input type="text" id="roomCode" placeholder="Room Code" maxlength="6" style="text-transform: uppercase;">
-                <button id="joinRoomBtn">Join Room</button>
+            <div class="gallery-title pop-title">⊹ ࣪ ﹏𓊝﹏𓂁﹏⊹ ࣪ ˖</div>
+            <div class="create-game-section">
+                <button id="createRoomBtn">⛵</button>
+                <div id="thumbnailCanvas" class="hidden"></div>
             </div>
             <div id="messageArea"></div>
+            <div class="rooms-gallery" id="roomsGallery"></div>
         </div>
         
+        </body>
+        
         <div id="gameScreen" class="hidden">
-            <div class="game-info">
-                <div class="players-list">
-                    <h3>Players</h3>
-                    <div id="playersList"></div>
-                </div>
-                <div class="game-status">
-                    <h3>Room: <span id="roomId"></span></h3>
-                    <div id="gameStatus">Waiting for players...</div>
-                    <button id="startGameBtn" class="hidden">Start Game</button>
-                    <button id="leaveRoomBtn">Leave Room</button>
+            <button id="exitGameBtn" style="position: absolute; top: 20px; right: 30px; z-index: 2000; padding: 10px 20px; background: #ff6b6b; color: white; border: none; border-radius: 50%; font-size: 16px; cursor: pointer; display: none; width: 50px; height: 50px;">✕</button>
+            
+            <!-- Lobby Screen -->
+            <div id="lobbyScreen" class="lobby-screen">
+                <div class="lobby-container">
+                    <div class="lobby-players">
+                        <div id="lobbyPlayersList"></div>
+                    </div>
+                    <div class="lobby-controls">
+                        <button id="startGameBtn" class="hidden">▶</button>
+                        <button id="leaveLobbyBtn">✕</button>
+                    </div>
                 </div>
             </div>
             
-            <div id="instructions" class="instructions">
-                <p><strong>How to Play:</strong></p>
-                <p>Draw the shapes that match your color! When you draw the correct shape near a symbol of your color, it will disappear.</p>
-                <p><span id="gameMode">Work together with your team to clear all symbols and win!</span> Games can be played with 1-4 players.</p>
-                <p><strong>Your color:</strong> <span id="playerColorName"></span></p>
+            <!-- Game UI overlay -->
+            <div id="gameUI" class="game-ui hidden">
+                <div class="players-list">
+                    <div id="playersList"></div>
+                </div>
             </div>
             
             <div id="gameCanvas" class="hidden"></div>
@@ -193,5 +54,23 @@
     </div>
 
     <script src="game.js"></script>
+    <script>
+window.addEventListener('DOMContentLoaded', function() {
+    const menuScreen = document.getElementById('menuScreen');
+    const body = document.body;
+    const observer = new MutationObserver(() => {
+        if (!menuScreen.classList.contains('hidden')) {
+            body.classList.add('menu-active');
+        } else {
+            body.classList.remove('menu-active');
+        }
+    });
+    observer.observe(menuScreen, { attributes: true, attributeFilter: ['class'] });
+    // Initial check
+    if (!menuScreen.classList.contains('hidden')) {
+        body.classList.add('menu-active');
+    }
+});
+</script>
 </body>
 </html>
