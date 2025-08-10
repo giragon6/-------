@@ -16,7 +16,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const rooms = new Map();
 const playerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']; // Red, Teal, Blue, Green
 const symbols = [
-  'X', 
+  // 'X', 
   'line',
   'five-point star', 
   'arrowhead',
